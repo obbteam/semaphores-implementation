@@ -80,12 +80,12 @@ void *tgroupRowPush(void *ptr)
     {
         sem_wait(&MutexCart);
 
-        if (Idx != 0)
-        { /* row not empty, try later */
-            sem_post(&MutexCart);
-            usleep(10000); /* 10 ms back-off is enough */
-            continue;
-        }
+        // if (Idx != 0)
+        // { /* row not empty, try later */
+        //     sem_post(&MutexCart);
+        //     usleep(10000); /* 10 ms back-off is enough */
+        //     continue;
+        // }
 
         sem_wait(&MutexGroup);
 
@@ -123,13 +123,11 @@ void *tcartProcess(void *ptr)
             printf("[%d]", cart[i]);
         }
         printf("\n");
-        printf(" singleQ=%d  groupQ=%d\n", SingleQueue, GroupQueue);
         for (int i = 0; i < ROW; ++i)
         {
             cart[i] = 0;
         }
         Idx = 0;
-        sem_post(&MutexGroup);
         sem_post(&MutexCart);
     }
 }
