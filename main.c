@@ -91,9 +91,16 @@ void *tcartProcess(void *ptr)
     {
         sleep(CART_INTEVAL);
         sem_wait(&Mutex);
-        printf("\n\n===========Cart is departing===========\n\n");
+        printf("\n\n======================Cart is departing======================\n\n");
         int groups = pushGroupsIntoCart();
         int singles = pushSinglesIntoCart();
+
+        if (groups == 0 && singles == 0)
+        {
+            printf("===========No groups or singles. Cart is not leaving===========\n\n");
+            sem_post(&Mutex);
+            continue;
+        }
 
         printf("Groups pushed: %d, singles pushed: %d\n", groups, singles);
 
@@ -108,7 +115,7 @@ void *tcartProcess(void *ptr)
             cart[i] = 0;
         }
         idx = 0;
-        printf("\n\n\n===========Cart has left===========\n\n");
+        printf("\n\n\n======================Cart has left======================\n\n");
         sem_post(&Mutex);
     }
 }
