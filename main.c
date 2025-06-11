@@ -6,8 +6,8 @@
 #include <unistd.h>
 
 #define ROW 6                 /* Size of the cart */
-#define CART_INTEVAL 3        /* Timing of pushing the cart */
-#define SINGLE_INTERVAL 20    /* Timing of adding a single person into a queue */
+#define CART_INTEVAL 5        /* Timing of pushing the cart */
+#define SINGLE_INTERVAL 2     /* Timing of adding a single person into a queue */
 #define GROUP_INTERVAL 1      /* Timing of adding a group into a queue */
 #define FRONT_GROUPS 3        /* Number of groups to pick from the front of the queue */
 #define MAX_CARTS_W_SINGLES 2 /*Number of carts allowed to leave without singles*/
@@ -63,7 +63,7 @@ static int pushGroupsIntoCart()
             break;
 
         // we check if there was not pushed group and if so we set the groupSize to it
-        int groupSize = notPushedGroup ? notPushedGroup : rand() % 2 + 2;
+        int groupSize = notPushedGroup ? notPushedGroup : rand() % 5 + 1;
         notPushedGroup = 0;
 
         if (groupSize + idx > ROW)
