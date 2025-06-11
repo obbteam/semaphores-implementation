@@ -8,11 +8,13 @@
 #define ROW 6             /* Size of the cart */
 #define CART_INTEVAL 5    /* Timing of pushing the cart */
 #define SINGLE_INTERVAL 1 /* Timing of adding a single person into a queue */
-#define GROUP_INTERVAL 5  /* Timing of adding a group into a queue */
+#define GROUP_INTERVAL 4  /* Timing of adding a group into a queue */
+#define FRONT_GROUPS 3    /* Number of groups to pick from the front of the queue */
 
 sem_t Mutex;
+sem_t SingleQueue, GroupQueue;
 int cart[ROW];
-int idx = 0, singleQueue = 0, groupQueue = 0, notPushedGroup = 0;
+int idx = 0, notPushedGroup = 0;
 
 void *taddSinglePerson(void *ptr)
 {
@@ -20,10 +22,13 @@ void *taddSinglePerson(void *ptr)
     {
         sleep(SINGLE_INTERVAL);
         sem_wait(&Mutex);
-        ++singleQueue;
-        printf("[+] single joins – singles queue: %d\n", singleQueue);
+        sem_post(&SingleQueue);
+        int count;
+        sem_getvalue(&SingleQueue, &count);
+        printf("[+] single joins – singles queue: %d\n", count);
         sem_post(&Mutex);
     }
+    pthread_exit(0);
 }
 
 void *taddGroup(void *ptr)
@@ -32,10 +37,13 @@ void *taddGroup(void *ptr)
     {
         sleep(GROUP_INTERVAL);
         sem_wait(&Mutex);
-        ++groupQueue;
-        printf("[+] group joins – groups queue: %d\n", groupQueue);
+        sem_post(&GroupQueue);
+        int count;
+        sem_getvalue(&GroupQueue, &count);
+        printf("[+] group joins – groups queue: %d\n", count);
         sem_post(&Mutex);
     }
+    pthread_exit(0);
 }
 
 /*@return number of groups pushed into the cart*/
@@ -43,9 +51,11 @@ static int pushGroupsIntoCart()
 {
     int groupsPushed = 0;
 
-    int front = groupQueue >= 3 ? 3 : groupQueue;
-    for (int i = 0; i < front; ++i)
+    for (int i = 0; i < FRONT_GROUPS; ++i)
     {
+        if (sem_trywait(&GroupQueue) != 0)
+            break;
+
         // we check if there was not pushed group and if so we set the groupSize to it
         int groupSize = notPushedGroup ? notPushedGroup : rand() % 2 + 2;
         notPushedGroup = 0;
@@ -56,12 +66,13 @@ static int pushGroupsIntoCart()
             break;
         }
 
-        --groupQueue;
-        printf("[-] group leaves - group size: %d - group queue: %d\n", groupSize, groupQueue);
+        int count;
+        sem_getvalue(&GroupQueue, &count);
+        printf("[-] group leaves - group size: %d - group queue: %d\n", groupSize, count);
 
         for (int k = 0; k < groupSize; ++k)
         {
-            cart[idx % ROW]++;
+            cart[idx]++;
             idx++;
         }
         groupsPushed++;
@@ -73,12 +84,14 @@ static int pushGroupsIntoCart()
 static int pushSinglesIntoCart()
 {
     int singlesPushed = 0;
-    while (idx < ROW && singleQueue > 0)
+    int count = 0;
+    while (idx < ROW)
     {
-        --singleQueue;
-        cart[idx]++;
-        printf("[-] single leaves - single size: %d - single queue: %d\n", 1, singleQueue);
-        idx++;
+        if (sem_trywait(&SingleQueue) != 0)
+            break;
+        cart[idx++]++;
+        sem_getvalue(&SingleQueue, &count);
+        printf("[-] single leaves - single size: %d - single queue: %d\n", 1, count);
         singlesPushed++;
     }
     return singlesPushed;
@@ -118,6 +131,7 @@ void *tcartProcess(void *ptr)
         printf("\n\n\n======================Cart has left======================\n\n");
         sem_post(&Mutex);
     }
+    pthread_exit(0);
 }
 
 int main(int argc, char *argv[])
@@ -127,6 +141,8 @@ int main(int argc, char *argv[])
     srand(time(NULL));
 
     sem_init(&Mutex, 0, 1);
+    sem_init(&SingleQueue, 0, 0);
+    sem_init(&GroupQueue, 0, 0);
 
     pthread_create(&thread[0], NULL, (void *)&taddSinglePerson, NULL);
     pthread_create(&thread[1], NULL, (void *)&taddGroup, NULL);
