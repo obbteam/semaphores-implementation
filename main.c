@@ -7,8 +7,8 @@
 
 #define ROW 6             /* Size of the cart */
 #define CART_INTEVAL 5    /* Timing of pushing the cart */
-#define SINGLE_INTERVAL 2 /* Timing of adding a single person into a queue */
-#define GROUP_INTERVAL 1  /* Timing of adding a group into a queue */
+#define SINGLE_INTERVAL 1 /* Timing of adding a single person into a queue */
+#define GROUP_INTERVAL 5  /* Timing of adding a group into a queue */
 
 sem_t Mutex;
 int cart[ROW];
@@ -77,7 +77,7 @@ static int pushSinglesIntoCart()
     {
         --singleQueue;
         cart[idx]++;
-        printf("[-] single leaves - single size: %d - single queue: %d\n", 1, groupQueue);
+        printf("[-] single leaves - single size: %d - single queue: %d\n", 1, singleQueue);
         idx++;
         singlesPushed++;
     }
