@@ -5,16 +5,17 @@
 #include <time.h>
 #include <unistd.h>
 
-#define ROW 6             /* Size of the cart */
-#define CART_INTEVAL 5    /* Timing of pushing the cart */
-#define SINGLE_INTERVAL 1 /* Timing of adding a single person into a queue */
-#define GROUP_INTERVAL 4  /* Timing of adding a group into a queue */
-#define FRONT_GROUPS 3    /* Number of groups to pick from the front of the queue */
+#define ROW 6                 /* Size of the cart */
+#define CART_INTEVAL 3        /* Timing of pushing the cart */
+#define SINGLE_INTERVAL 20    /* Timing of adding a single person into a queue */
+#define GROUP_INTERVAL 1      /* Timing of adding a group into a queue */
+#define FRONT_GROUPS 3        /* Number of groups to pick from the front of the queue */
+#define MAX_CARTS_W_SINGLES 2 /*Number of carts allowed to leave without singles*/
 
 sem_t Mutex;
 sem_t SingleQueue, GroupQueue;
 int cart[ROW];
-int idx = 0, notPushedGroup = 0;
+int idx = 0, notPushedGroup = 0, cartsWithoutSingles = 0;
 
 void *taddSinglePerson(void *ptr)
 {
@@ -53,6 +54,11 @@ static int pushGroupsIntoCart()
 
     for (int i = 0; i < FRONT_GROUPS; ++i)
     {
+        if (cartsWithoutSingles >= MAX_CARTS_W_SINGLES)
+        {
+            printf("======================%d carts without singles================\n\n", MAX_CARTS_W_SINGLES);
+            break;
+        }
         if (sem_trywait(&GroupQueue) != 0)
             break;
 
@@ -62,6 +68,7 @@ static int pushGroupsIntoCart()
 
         if (groupSize + idx > ROW)
         {
+            sem_post(&GroupQueue);
             notPushedGroup = groupSize;
             break;
         }
@@ -84,16 +91,17 @@ static int pushGroupsIntoCart()
 static int pushSinglesIntoCart()
 {
     int singlesPushed = 0;
-    int count = 0;
     while (idx < ROW)
     {
         if (sem_trywait(&SingleQueue) != 0)
             break;
         cart[idx++]++;
+        int count = 0;
         sem_getvalue(&SingleQueue, &count);
         printf("[-] single leaves - single size: %d - single queue: %d\n", 1, count);
         singlesPushed++;
     }
+
     return singlesPushed;
 }
 
@@ -104,13 +112,20 @@ void *tcartProcess(void *ptr)
     {
         sleep(CART_INTEVAL);
         sem_wait(&Mutex);
-        printf("\n\n======================Cart is departing======================\n\n");
+        printf("\n\n=============================================================\n");
+        printf("======================Cart is departing======================\n\n");
         int groups = pushGroupsIntoCart();
         int singles = pushSinglesIntoCart();
 
+        if (singles == 0)
+            cartsWithoutSingles++;
+        else
+            cartsWithoutSingles = 0;
+
         if (groups == 0 && singles == 0)
         {
-            printf("===========No groups or singles. Cart is not leaving===========\n\n");
+            printf("==========No groups or singles. Cart is not leaving==========\n");
+            printf("=============================================================\n\n");
             sem_post(&Mutex);
             continue;
         }
@@ -128,7 +143,8 @@ void *tcartProcess(void *ptr)
             cart[i] = 0;
         }
         idx = 0;
-        printf("\n\n\n======================Cart has left======================\n\n");
+        printf("\n\n======================Cart has left==========================\n");
+        printf("=============================================================\n\n");
         sem_post(&Mutex);
     }
     pthread_exit(0);
