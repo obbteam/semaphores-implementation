@@ -63,7 +63,7 @@ static int pushGroupsIntoCart()
             break;
 
         // we check if there was not pushed group and if so we set the groupSize to it
-        int groupSize = notPushedGroup ? notPushedGroup : rand() % 5 + 1;
+        int groupSize = notPushedGroup ? notPushedGroup : rand() % 4 + 2;
         notPushedGroup = 0;
 
         if (groupSize + idx > ROW)
