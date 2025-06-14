@@ -69,6 +69,7 @@ static int pushGroupsIntoCart()
         if (groupSize + idx > ROW)
         {
             sem_post(&GroupQueue);
+            printf("[/] group holds - group size: %d\n", groupSize);
             notPushedGroup = groupSize;
             break;
         }
